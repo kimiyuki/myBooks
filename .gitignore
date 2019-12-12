@@ -1,0 +1,7 @@
+node_modules
+a.json
+log.json
+out.log
+.clasp.json
+.env
+*.swp

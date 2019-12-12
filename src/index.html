@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <style>
+    canvas,
+    video {
+      border: 2px solid gray;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>html5 camera</h1>
+  <video id="camera" width="300" , height="300"></video>
+  <canvas id="picture" width="300" height="300"></canvas>
+  <button class="button" id="shutter">shutter</button>
+  <button class="button" id="sendToGyazo">sendToGyazo</button>
+  <div id="out"></div>
+  <script>
+    const sendToGyazo = () => {
+      const canvas = document.querySelector("#picture")
+      google.script.run.withSuccessHandler(insertATag).getGyazoImageUrl(
+        dataUrl = canvas.toDataUrl(), referalUrl = location.href
+      )
+    }
+    const insertATag(src){
+      const tag = document.createElement("a");
+      tag.src = src;
+      tag.textContent = src;
+      document.querySelector("#out").appendChild(tag)
+    }
+
+    window.onload = () => {
+      const video = document.querySelector("#camera");
+      const canvas = document.querySelector("#picture");
+      const contraints = {
+        audio: false,
+        video: {
+          width: { min: 300, ideal: 480, max: 1080 },
+          height: { min: 300, ideal: 720, max: 1080 },
+          //facingMode: { exact: "environment" }
+          facingMode: "user"
+        }
+      };
+
+      navigator.mediaDevices.getUserMedia(contraints)
+        .then((stream) => {
+          video.srcObject = stream;
+          video.onloadedmetadata = (e) => {
+            video.play();
+          };
+        })
+        .then((err) => {
+          console.log(err);
+        });
+
+      document.querySelector("#shutter").addEventListener("click", () => {
+        const ctx = canvas.getContext("2d");
+        video.pause()
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        setTimeout(() => video.play(), 500);
+      });
+      document.querySelector("#sendToGyazo").addEventListener("click", () => {
+        sendToGyazo();
+      })
+    };
+  </script>
+</body>
+
+</html>
