@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 
 <head>
   <meta charset="UTF-8">
@@ -18,20 +18,24 @@
   <h1>html5 camera</h1>
   <video id="camera" width="300" , height="300"></video>
   <canvas id="picture" width="300" height="300"></canvas>
+  <br />
   <button class="button" id="shutter">shutter</button>
   <button class="button" id="sendToGyazo">sendToGyazo</button>
   <div id="out"></div>
   <script>
-    const sendToGyazo = () => {
-      const canvas = document.querySelector("#picture")
-      google.script.run.withSuccessHandler(insertATag).getGyazoImageUrl(
-        dataUrl = canvas.toDataUrl(), referalUrl = location.href
-      )
+    function callAppsScript() {
+      google.script.run
+        .withSuccessHandler(insertATag)
+        .withFailureHandler(function (e) { console.log(e) })
+        .getGyazoImageUrl(
+          document.querySelector("#picture").toDataURL(), location.href
+        );
     }
-    const insertATag(src){
+    function insertATag(src) {
       const tag = document.createElement("a");
-      tag.src = src;
-      tag.textContent = src;
+      tag.href = src;
+      tag.target='_top';
+      tag.innerText = src;
       document.querySelector("#out").appendChild(tag)
     }
 
@@ -66,7 +70,7 @@
         setTimeout(() => video.play(), 500);
       });
       document.querySelector("#sendToGyazo").addEventListener("click", () => {
-        sendToGyazo();
+        callAppsScript();
       })
     };
   </script>
