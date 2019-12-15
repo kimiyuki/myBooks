@@ -16,9 +16,9 @@ const _getISBN = (row: number, col: number): string => {
 const setBookData = (row: number, start_col: number, book: Book) => {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('books');
   Logger.log(book);
-  sheet.getRange(row, start_col, 1, 6).setValues([
-    [book.title, book.thumbnail, book.authors.join(','), book.publisher,
-     Moment.moment(book.publishedDate).format('YYYY-MM-DD'), book.url]
+  sheet.getRange(row, start_col, 1, 7).setValues([
+    [book.isbn, book.title, book.thumbnail, book.authors.join(','), book.publisher,
+    Moment.moment(book.publishedDate).format('YYYY-MM-DD'), book.url]
   ]);
 };
 
@@ -33,7 +33,7 @@ interface Book {
 }
 
 function getBookInfo(isbn: string): Book | undefined {
-  if (isbn.length != 10 && isbn.length != 13 ) {
+  if (isbn.length != 10 && isbn.length != 13) {
     console.log(`${isbn}: we use ISBN with 10 or 13 chars`);
     return undefined
   }
@@ -55,9 +55,9 @@ function getBookInfo(isbn: string): Book | undefined {
   return undefined;
 }
 
-function addBook(isbn:string):void{
+function addBook(isbn: string): void {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('books');
   const book = getBookInfo(isbn);
-  const row = 10
-  setBookData(row, 2, book)
+  const row = sheet.getLastRow() + 1;
+  setBookData(row, 1, book);
 }
