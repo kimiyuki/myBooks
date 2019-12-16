@@ -5,8 +5,8 @@
 <img src="https://i.gyazo.com/d708db7c1243fa9a2b4928672397e187.jpg" width="50px"/>
 <img src="https://i.gyazo.com/2c03509cf6d3c4491ff08884f11a540f.png" width="100px"/>
 
-> 参考にする [GAS×スプレッドシート×GlideApps×Slack×Pic2shopで作る書籍管理アプリの実装 - Qiita]
-
+> 参考にする 
+- [GAS×スプレッドシート×GlideApps×Slack×Pic2shopで作る書籍管理アプリの実装 - Qiita](https://qiita.com/mgmgOmO/items/0c1e14385875ac30878a)
 ## Claspの始め方
 
 以下を参考にする
