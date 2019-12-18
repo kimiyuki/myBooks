@@ -12,6 +12,7 @@
 <body>
   <div class="columns is-centered is-mobile">
     <h1 class="column is-half"><?= bookTitle ?></h1>
+    <h2 id="isbn"><?= isbn ?></h2>
   </div>
   <div id="out" style="margin:10px;"></div>
 
@@ -39,7 +40,10 @@
         .withFailureHandler(function (e) {
           console.log(e)
         })
-        .uploadScrap(document.querySelector("#picture").toDataURL())
+        .uploadScrap(
+          document.querySelector("#picture").toDataURL(),
+          document.querySelector("#isbn").innerText
+          )
       //.getGyazoImageUrl(document.querySelector("#picture").toDataURL(), location.href);
     }
     function insertATag(src) {

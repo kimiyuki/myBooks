@@ -21,7 +21,7 @@ const setBookData = (row: number, startCol: number, book: IBook) => {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("books");
   Logger.log(book);
   sheet
-    .getRange(row, startCol, 1, 7)
+    .getRange(row, startCol, 1, 8)
     .setValues([
       [
         book.isbn,
@@ -30,7 +30,9 @@ const setBookData = (row: number, startCol: number, book: IBook) => {
         book.authors.join(","),
         book.publisher,
         Moment.moment(book.publishedDate).format("YYYY-MM-DD"),
-        book.url
+        book.url,
+        `https://script.google.com/macros/s/AKfycbyVAFU6cyklJb0SXTXCtlRnP2GK4jlAGdqe_0y232t8/dev?isbn=${decodeURIComponent(book.isbn)}&type=scrap`
+
       ]
     ]);
 };
@@ -55,13 +57,13 @@ function getBookInfoFromAPI(isbn: string): IBook | undefined {
   Logger.log(res);
   // how to write type from json??? TODO
   if (res.totalItems === 1) {
-    return setBookObject(res);
+    return setBookObject(isbn, res);
   } else {
     return undefined;
   }
 }
 
-function setBookObject(res: any): IBook {
+function setBookObject(isbn: string, res: any): IBook {
   const vol = res["items"][0]["volumeInfo"];
   const book = {
     isbn: isbn,

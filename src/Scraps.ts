@@ -1,10 +1,10 @@
-function uploadScrap(s: string, title: string, page_no: number): void {
+function uploadScrap(s: string, isbn: string, page_no: number): void {
   Logger.log(s.slice(0, 30));
   const decoded = Utilities.base64Decode(s.replace(/(.*?),/, ""));
   const blb = Utilities.newBlob(
     decoded,
     "image/png",
-    `${title}_${page_no}.png`
+    `${isbn}_${page_no || "0"}.png`
   );
   const file = DriveApp.getFolderById(
     ScriptProperties.getProperty("IMG_DIR")
