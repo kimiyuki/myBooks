@@ -18,7 +18,7 @@ function doGet(e: any): GoogleAppsScript.HTML.HtmlOutput {
   } else {
     // for capture book image
     const htmlOutput = HtmlService.createTemplateFromFile("index.html").evaluate();
-    htmlOutput.setTitle("GAS+Vue.js");
+    htmlOutput.setTitle("MyBooks");
     return htmlOutput;
   }
 }

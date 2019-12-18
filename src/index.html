@@ -6,32 +6,81 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Document</title>
-  <style>
-    canvas,
-    video {
-      border: 2px solid gray;
-    }
-  </style>
+  <?!= HtmlService.createHtmlOutputFromFile("mobile-css").getContent() ?>
 </head>
 
 <body>
-  <h1>html5 camera</h1>
-  <video id="camera" width="300" , height="300"></video>
-  <canvas id="picture" width="300" height="300"></canvas>
-  <br />
-  <button class="button" id="switchCamera">Switch Camera</button>
-  <button class="button" id="shutter">shutter</button>
-  <button class="button" id="sendToGyazo">sendToGyazo</button>
+  <div class="columns is-centered is-mobile">
+    <h1 class="column is-half">html5 camera</h1>
+  </div>
+  <div>
+    <button class="button flex-item" id="switchCamera">Switch Camera</button>
+    <button class="button flex-item" id="shutter">Shutter</button>
+    <button class="button flex-item" id="sendToGyazo">sendToGyazo</button>
+  </div>
   <div id="out"></div>
+  <div>
+    <div>
+      <video id="camera"></video>
+    </div>
+    <div id="wrapper">
+      <canvas id="picture"></canvas>
+    </div>
+  </div>
+
+  <br />
+
   <script>
+    const video = document.querySelector("#camera");
+    const canvas = document.querySelector("#picture");
+    console.log(video);
+    console.log(canvas);
+    canvas.height = canvas.clientHeight;
+    canvas.width = canvas.clientWidth;
+    let front = false;
+    const constraints = {
+      audio: false,
+      video: {
+        //width: { min: 360, ideal: 480, max: 720 },
+        //height: { min: 360, ideal: 720, max: 720 },
+        //width: { ideal:360}, height:{ideal: 480},
+        //facingMode: { exact: "environment" }
+        facingMode: (front ? "user" : "environment")
+      }
+    };
+    startCamera(flip = false);
+    document.querySelector("#shutter").addEventListener("click", () => {
+      const ctx = canvas.getContext("2d");
+      video.pause()
+      // camera is <video id="camera">
+      //ctx.drawImage(video, 0, 0, camera.clientWidth, camera.clientHeight);
+      const camera = document.getElementById("camera");
+      const picture = document.getElementById("picture");
+      const cw = camera.clientWidth;
+      const ch = camera.clientHeight
+      //http://www.htmq.com/canvas/drawImage_s.shtml
+      ctx.drawImage(camera, 0, 0, 500, 800, 0, 0, 500, 800);
+      //ctx.drawImage(video,0,0);//, 0, 0, camera.clientWidth, camera.clientHeight);
+      setTimeout(() => video.play(), 500);
+    })
+    document.querySelector("#sendToGyazo").addEventListener("click", () => {
+      callAppsScript();
+    })
+    document.querySelector("#switchCamera").addEventListener("click", () => {
+      startCamera(flip = true);
+    })
+
     function callAppsScript() {
       google.script.run
         .withSuccessHandler(insertATag)
-        .withFailureHandler(function (e) { console.log(e) })
+        .withFailureHandler(function (e) {
+          console.log(e)
+        })
         .getGyazoImageUrl(
           document.querySelector("#picture").toDataURL(), location.href
         );
     }
+
     function insertATag(src) {
       const tag = document.createElement("a");
       tag.href = src;
@@ -39,18 +88,6 @@
       tag.innerText = src;
       document.querySelector("#out").appendChild(tag)
     }
-    let front = false;
-    const constraints = {
-      audio: false,
-      video: {
-        width: { min: 300, ideal: 480, max: 1080 },
-        height: { min: 300, ideal: 720, max: 1080 },
-        //facingMode: { exact: "environment" }
-        facingMode: (front ? "user" : "environment")
-      }
-    };
-    const video = document.querySelector("#camera");
-    const canvas = document.querySelector("#picture");
 
     function startCamera(flip = false) {
       if (flip) {
@@ -66,24 +103,7 @@
         .then((err) => {
           console.log(err);
         });
-
     }
-
-    window.onload = () => {
-      startCamera(flip = false);
-      document.querySelector("#shutter").addEventListener("click", () => {
-        const ctx = canvas.getContext("2d");
-        video.pause()
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setTimeout(() => video.play(), 500);
-      });
-      document.querySelector("#sendToGyazo").addEventListener("click", () => {
-        callAppsScript();
-      })
-      document.querySelector("#switchCamera").addEventListener("click", () => {
-        startCamera(flip = true);
-      })
-    };
   </script>
 </body>
 
