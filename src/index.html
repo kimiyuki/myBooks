@@ -11,24 +11,44 @@
 
 <body>
   <div class="columns is-centered is-mobile">
+
     <h1 class="column is-half">html5 camera</h1>
   </div>
-  <div>
-    <button class="button flex-item" id="switchCamera">Switch Camera</button>
-    <button class="button flex-item" id="shutter">Shutter</button>
-    <button class="button flex-item" id="sendToGyazo">sendToGyazo</button>
-  </div>
-  <div id="out"></div>
-  <div>
+  <div id="out" style="margin:10px;"></div>
+  <form>
     <div>
-      <video id="camera"></video>
+      <div class="row1">
+        <video id="camera"></video>
+      </div>
+      <div class="row2">
+        <button class="button flex-item" id="switchCamera">Switch Camera</button>
+        <button class="button flex-item" id="shutter">Shutter</button>
+        <button class="button flex-item" id="upload" onclick="callAppsScript">Upload</button>
+      </div>
+      <div id="row3">
+        <canvas id="picture"></canvas>
+      </div>
     </div>
-    <div id="wrapper">
-      <canvas id="picture"></canvas>
-    </div>
-  </div>
-
+  </form>
   <br />
+  <script>
+    function callAppsScript() {
+      google.script.run
+        .withSuccessHandler(insertATag)
+        .withFailureHandler(function (e) {
+          console.log(e)
+        })
+        .upload(document.forms[0])
+      //.getGyazoImageUrl(document.querySelector("#picture").toDataURL(), location.href);
+    }
+    function insertATag(src) {
+      const tag = document.createElement("a");
+      tag.href = src;
+      tag.target = '_top';
+      tag.innerText = src;
+      document.querySelector("#out").appendChild(tag)
+    }
+  </script>
 
   <script>
     const video = document.querySelector("#camera");
@@ -63,31 +83,10 @@
       //ctx.drawImage(video,0,0);//, 0, 0, camera.clientWidth, camera.clientHeight);
       setTimeout(() => video.play(), 500);
     })
-    document.querySelector("#sendToGyazo").addEventListener("click", () => {
-      callAppsScript();
-    })
     document.querySelector("#switchCamera").addEventListener("click", () => {
       startCamera(flip = true);
     })
 
-    function callAppsScript() {
-      google.script.run
-        .withSuccessHandler(insertATag)
-        .withFailureHandler(function (e) {
-          console.log(e)
-        })
-        .getGyazoImageUrl(
-          document.querySelector("#picture").toDataURL(), location.href
-        );
-    }
-
-    function insertATag(src) {
-      const tag = document.createElement("a");
-      tag.href = src;
-      tag.target = '_top';
-      tag.innerText = src;
-      document.querySelector("#out").appendChild(tag)
-    }
 
     function startCamera(flip = false) {
       if (flip) {

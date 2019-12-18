@@ -10,6 +10,11 @@ function receiveISBN(isbn: string): void {
   addBook(isbn);
 }
 
+const upload = e => {
+  const file = e.parameters.file;
+  console.log(file);
+};
+
 function doGet(e: any): GoogleAppsScript.HTML.HtmlOutput {
   const isbn: string | undefined = e.parameter.isbn;
   if (isbn !== undefined) {
@@ -17,7 +22,9 @@ function doGet(e: any): GoogleAppsScript.HTML.HtmlOutput {
     return HtmlService.createHtmlOutput();
   } else {
     // for capture book image
-    const htmlOutput = HtmlService.createTemplateFromFile("index.html").evaluate();
+    const htmlOutput = HtmlService.createTemplateFromFile(
+      "index.html"
+    ).evaluate();
     htmlOutput.setTitle("MyBooks");
     return htmlOutput;
   }
@@ -40,19 +47,15 @@ function getGyazoImageUrl(dataUrl: string, refererUrl: string): string {
     title: "foo book title"
   };
   const params: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
-    //shouled be default, contentType: "application/x-www-form-urlencoded' 
+    // shouled be default, contentType: "application/x-www-form-urlencoded'
     method: "post",
     payload: body
     // tslint:disable-next-line: object-literal-sort-keys
-    //muteHttpExceptions: true
+    // muteHttpExceptions: true
   };
   Logger.log(UrlFetchApp.getRequest(gyazoUrl, params));
-  const res = UrlFetchApp.fetch(gyazoUrl, params)
+  const res = UrlFetchApp.fetch(gyazoUrl, params);
   Logger.log(res.getResponseCode);
   const jsn = JSON.parse(res.getContentText());
   return jsn.get_image_url;
-}
-
-function runBackEnd() {
-  return "hello from backend";
 }
