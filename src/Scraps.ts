@@ -32,9 +32,13 @@ function createScrap(isbn: string, page: number, file: GoogleAppsScript.Drive.Fi
 
 function setScrapToSheet(scrap: IScrap) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("scraps");
-  const row = sheet.getLastRow() + 1;
+  const values = sheet.getRange("A:A").getValues();
+  let ct = 0;
+  while (values[ct] && values[ct][0] !== "") {
+    ct++;
+  }
   sheet
-    .getRange(row, 1, 1, Object.keys(scrap).length)
+    .getRange(ct + 1, 1, 1, Object.keys(scrap).length)
     .setValues([[scrap.isbn, scrap.page, scrap.url, scrap.create_at]]);
 };
 
