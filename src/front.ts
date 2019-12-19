@@ -3,7 +3,7 @@ function procInSheet(isbn: string): void {
 }
 
 function getTitle(isbn: string): string {
-  const title: string = "hello title #TODO";
+  const title: string = "hello title #TODO2";
   return title;
 }
 
@@ -12,7 +12,7 @@ function doGet(e: any): GoogleAppsScript.HTML.HtmlOutput {
   const isbn: string | undefined = e.parameter.isbn;
   const ptype: string | undefined = e.parameter.type;
   if (ptype === undefined || isbn === undefined) {
-    return HtmlService.createHtmlOutput("hello");
+    return HtmlService.createHtmlOutput("hello10");
   } else if (ptype === "book") {
     procInSheet(isbn);
     return HtmlService.createHtmlOutput();

@@ -33,19 +33,20 @@
   <br />
   <script>
     function callAppsScript() {
-      const fm = document.forms[0];
-      console.log()
       google.script.run
-        .withSuccessHandler(insertATag)
-        .withFailureHandler(function (e) {
-          console.log(e)
+        .withSuccessHandler(() => {
+          document.getElementsByTagName("h1")[0].innerText = "windowをcloseしてください"
+        })
+        .withFailureHandler(e => {
+          console.log(e);
         })
         .uploadScrap(
           document.querySelector("#picture").toDataURL(),
           document.querySelector("#isbn").innerText
-          )
+        )
       //.getGyazoImageUrl(document.querySelector("#picture").toDataURL(), location.href);
     }
+    /*
     function insertATag(src) {
       const tag = document.createElement("a");
       tag.href = src;
@@ -53,6 +54,7 @@
       tag.innerText = src;
       document.querySelector("#out").appendChild(tag)
     }
+    */
   </script>
 
   <script>
