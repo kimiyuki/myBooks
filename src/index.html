@@ -3,7 +3,6 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>snap</title>
   <?!= HtmlService.createHtmlOutputFromFile("css").getContent() ?>
@@ -24,17 +23,18 @@
   </div>
 
   <div class="footer buttons flex-container">
-    <button class="button flex-item" id="snap" onclick="snap()">Switch Camera</button>
-    <button class="button flex-item" id="upload" onclick="upload()">Shutter</button>
+    <button class="button flex-item" id="snap" onclick="snap()">snap</button>
+    <button class="button flex-item" id="upload" onclick="upload()">upload</button>
   </div>
 
   <script>
     const video = document.querySelector("#camera");
     const canvas = document.querySelector("#picture");
-    const w = 720;
-    const h = 1080;
+    const w = 360
+    const h = 480;
     canvas.height = w;
     canvas.width = h;
+    console.log(canvas);
     let front = false;
     const constraints = {
       audio: false,
@@ -62,29 +62,31 @@
 
     function snap() {
       const snap = document.querySelector("#snap");
-      document.querySelector("#snap").addEventListener("click", () => {
-        if (snap.textContent === "snap") {
-          snap.textContent = "restart";
-          //video.pause()
-          canvas.getContext("2d").drawImage(camera, 0, 0, w, h);
-          //setTimeout(() => video.play(), 500);
-          video.setAttribute("style", "display:none");
-          canvas.setAttribute("style", "display:block");
-        } else if (snap.textContent === "restart") {
-          snap.textContent = "snap";
-          video.setAttribute("style", "display:block");
-          canvas.setAttribute("style", "display:none");
-        }
-      })
-      document.querySelector("#upload").addEventListener("click", () => {
-        startCamera(flip = true);
-      })
+      console.log(snap);
+      if (snap.textContent === "snap") {
+        snap.textContent = "restart";
+        //video.pause()
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(
+          video, 0, 0
+          // 0, 0, video.videoWidth, video.videoHeight,
+          // 0, 0, canvas.width, canvas.width / video.videoWidth * video.videoHeight
+        )
+        //setTimeout(() => video.play(), 500);
+        video.setAttribute("style", "display:none");
+        canvas.setAttribute("style", "display:block");
+      } else if (snap.textContent === "restart") {
+        snap.textContent = "snap";
+        video.setAttribute("style", "display:block");
+        canvas.setAttribute("style", "display:none");
+      }
     }
 
     function upload() {
       google.script.run
         .withSuccessHandler(() => {
-          document.getElementsById("out").innerText = "windowをcloseしてください"
+          document.getElementById("out").innerText = "windowをcloseしてください"
         })
         .withFailureHandler(e => { console.log(e); })
         .uploadScrap(
@@ -92,6 +94,11 @@
           document.querySelector("#isbn").innerText
         )
       //.getGyazoImageUrl(document.querySelector("#picture").toDataURL(), location.href);
+    }
+    window.onload = () => {
+      console.log(`viewport size:${window.innerWidth}:${window.innerHeight}`)
+      console.log(`videoWidth,Height- ${video.videoWidth}:${video.videoHeight}`)
+      console.log(`video.style.hw- ${video.width}:${video.height}`)
     }
   </script>
 
