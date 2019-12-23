@@ -5,96 +5,45 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Document</title>
-  <?!= HtmlService.createHtmlOutputFromFile("mobile-css").getContent() ?>
+  <title>snap</title>
+  <?!= HtmlService.createHtmlOutputFromFile("css").getContent() ?>
 </head>
 
 <body>
-  <div class="columns is-centered is-mobile">
-    <h1 class="column is-half"><?= bookTitle ?></h1>
-    <h2 id="isbn"><?= isbn ?></h2>
+  <div id="out"></div>
+  <div class="header">
+    <div class="columns is-centered is-mobile">
+      <h3 class="column is-half"><?= bookTitle ?></h3>
+      <h4 id="isbn"><?= isbn ?></h4>
+    </div>
   </div>
-  <div id="out" style="margin:10px;"></div>
 
-  <div>
-    <div class="row1">
-      <video id="camera"></video>
-    </div>
-    <div class="row2">
-      <button class="button flex-item" id="switchCamera">Switch Camera</button>
-      <button class="button flex-item" id="shutter">Shutter</button>
-    </div>
-    <div id="row3">
-      <button class="button flex-item" id="upload" onclick="callAppsScript()">Upload</button>
-      </br>
-      <canvas id="picture" nma></canvas>
-    </div>
+  <div class="main">
+    <video id="camera"></video>
+    <canvas id="picture"></canvas>
   </div>
-  <br />
-  <script>
-    function callAppsScript() {
-      google.script.run
-        .withSuccessHandler(() => {
-          document.getElementsByTagName("h1")[0].innerText = "windowをcloseしてください"
-        })
-        .withFailureHandler(e => {
-          console.log(e);
-        })
-        .uploadScrap(
-          document.querySelector("#picture").toDataURL(),
-          document.querySelector("#isbn").innerText
-        )
-      //.getGyazoImageUrl(document.querySelector("#picture").toDataURL(), location.href);
-    }
-    /*
-    function insertATag(src) {
-      const tag = document.createElement("a");
-      tag.href = src;
-      tag.target = '_top';
-      tag.innerText = src;
-      document.querySelector("#out").appendChild(tag)
-    }
-    */
-  </script>
+
+  <div class="footer buttons flex-container">
+    <button class="button flex-item" id="snap" onclick="snap()">Switch Camera</button>
+    <button class="button flex-item" id="upload" onclick="upload()">Shutter</button>
+  </div>
 
   <script>
     const video = document.querySelector("#camera");
     const canvas = document.querySelector("#picture");
-    console.log(video);
-    console.log(canvas);
-    canvas.height = canvas.clientHeight;
-    canvas.width = canvas.clientWidth;
+    const w = 720;
+    const h = 1080;
+    canvas.height = w;
+    canvas.width = h;
     let front = false;
     const constraints = {
       audio: false,
       video: {
-        //width: { min: 360, ideal: 480, max: 720 },
-        //height: { min: 360, ideal: 720, max: 720 },
-        //width: { ideal:360}, height:{ideal: 480},
-        //facingMode: { exact: "environment" }
+        width: { ideal: 4096 }, height: { ideal: 2160 },
         facingMode: (front ? "user" : "environment")
       }
     };
     startCamera(flip = false);
-    document.querySelector("#shutter").addEventListener("click", () => {
-      const ctx = canvas.getContext("2d");
-      video.pause()
-      // camera is <video id="camera">
-      //ctx.drawImage(video, 0, 0, camera.clientWidth, camera.clientHeight);
-      const camera = document.getElementById("camera");
-      const picture = document.getElementById("picture");
-      const cw = camera.clientWidth;
-      const ch = camera.clientHeight
-      //http://www.htmq.com/canvas/drawImage_s.shtml
-      ctx.drawImage(camera, 0, 0, 500, 800, 0, 0, 500, 800);
-      //ctx.drawImage(video,0,0);//, 0, 0, camera.clientWidth, camera.clientHeight);
-      setTimeout(() => video.play(), 500);
-    })
-    document.querySelector("#switchCamera").addEventListener("click", () => {
-      startCamera(flip = true);
-    })
-
-
     function startCamera(flip = false) {
       if (flip) {
         constraints.video.facingMode = (constraints.video.facingMode == "user") ? "environment" : "user";
@@ -110,7 +59,42 @@
           console.log(err);
         });
     }
+
+    function snap() {
+      const snap = document.querySelector("#snap");
+      document.querySelector("#snap").addEventListener("click", () => {
+        if (snap.textContent === "snap") {
+          snap.textContent = "restart";
+          //video.pause()
+          canvas.getContext("2d").drawImage(camera, 0, 0, w, h);
+          //setTimeout(() => video.play(), 500);
+          video.setAttribute("style", "display:none");
+          canvas.setAttribute("style", "display:block");
+        } else if (snap.textContent === "restart") {
+          snap.textContent = "snap";
+          video.setAttribute("style", "display:block");
+          canvas.setAttribute("style", "display:none");
+        }
+      })
+      document.querySelector("#upload").addEventListener("click", () => {
+        startCamera(flip = true);
+      })
+    }
+
+    function upload() {
+      google.script.run
+        .withSuccessHandler(() => {
+          document.getElementsById("out").innerText = "windowをcloseしてください"
+        })
+        .withFailureHandler(e => { console.log(e); })
+        .uploadScrap(
+          document.querySelector("#picture").toDataURL(),
+          document.querySelector("#isbn").innerText
+        )
+      //.getGyazoImageUrl(document.querySelector("#picture").toDataURL(), location.href);
+    }
   </script>
+
 </body>
 
 </html>

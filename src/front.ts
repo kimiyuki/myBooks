@@ -12,7 +12,7 @@ function doGet(e: any): GoogleAppsScript.HTML.HtmlOutput {
   const isbn: string | undefined = e.parameter.isbn;
   const ptype: string | undefined = e.parameter.type;
   if (ptype === undefined || isbn === undefined) {
-    return HtmlService.createHtmlOutput("hello10");
+    return HtmlService.createHtmlOutput("hello11");
   } else if (ptype === "book") {
     procInSheet(isbn);
     return HtmlService.createHtmlOutput();
