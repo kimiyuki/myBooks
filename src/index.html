@@ -25,6 +25,7 @@
   <div class="footer buttons flex-container">
     <button class="button flex-item" id="snap" onclick="snap()">snap</button>
     <button class="button flex-item" id="upload" onclick="upload()">upload</button>
+    <span id="uploading-msg"></span>
   </div>
 
   <script>
@@ -84,9 +85,15 @@
     }
 
     function upload() {
+      document.getElementById("upload").setAttribute("style", "display:none;");
+      const msgTag = document.getElementById("uploading-msg");
+      msgTag.innerText = "uploading";
+
       google.script.run
         .withSuccessHandler(() => {
-          document.getElementById("out").innerText = "windowをcloseしてください"
+          const msg = "バックボタンで戻ってください";
+          msgTag.innerHTML = msg; 
+          document.getElementById("out").innerText = msg;
         })
         .withFailureHandler(e => { console.log(e); })
         .uploadScrap(
