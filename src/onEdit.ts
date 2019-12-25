@@ -14,3 +14,17 @@ function onEdit(e: GoogleAppsScript.Events.SheetsOnEdit) {
     }
   }
 }
+
+function onChange(e) {
+  Logger.log(e.changeType);
+  Logger.log(e);
+}
+
+
+function createSpreadsheetChangeTrigger() {
+  const ss = SpreadsheetApp.getActive();
+  ScriptApp.newTrigger('onChange')
+    .forSpreadsheet(ss)
+    .onChange()
+    .create();
+}

@@ -1,5 +1,5 @@
-function procInSheet(isbn: string): void {
-  addBook(isbn);
+function procInSheet(isbn: string): boolean {
+  return addBook(isbn);
 }
 
 function getTitle(isbn: string): string {
@@ -14,10 +14,13 @@ function doGet(e: any): GoogleAppsScript.HTML.HtmlOutput {
   if (ptype === undefined || isbn === undefined) {
     return HtmlService.createHtmlOutput("hello11");
   } else if (ptype === "book") {
-    procInSheet(isbn);
-    return HtmlService
-      .createHtmlOutput()
-      .addMetaTag("viewport", "width=device-width, initial-scale=1");
+    const msg = procInSheet(isbn)
+      ? "<p>uploadしました。端末のバックボタンで戻る</p>"
+      : "<p>登録済みの本です</p>";
+    return HtmlService.createHtmlOutput(msg).addMetaTag(
+      "viewport",
+      "width=device-width, initial-scale=1"
+    );
   } else if (ptype === "scrap") {
     // for capture book image
     const template = HtmlService.createTemplateFromFile("index.html");

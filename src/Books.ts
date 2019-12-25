@@ -22,7 +22,7 @@ const setBookData = (row: number, startCol: number, book: IBook) => {
   const WEB_APP_ID = ScriptProperties.getProperty("WEB_APP_ID");
   Logger.log(book);
   sheet
-    .getRange(row, startCol, 1, 9)
+    .getRange(row, startCol, 1, 11)
     .setValues([
       [
         book.isbn,
@@ -32,8 +32,14 @@ const setBookData = (row: number, startCol: number, book: IBook) => {
         book.publisher,
         Moment.moment(book.publishedDate).format("YYYY-MM-DD"),
         book.url,
-        `https://script.google.com/macros/s/${WEB_APP_ID}/dev?isbn=${decodeURIComponent(book.isbn)}&type=scrap`,
-        `https://www.google.com/search?q=${encodeURIComponent(book.title + book.authors.join())}`
+        `https://script.google.com/macros/s/${WEB_APP_ID}/dev?isbn=${decodeURIComponent(
+          book.isbn
+        )}&type=scrap`,
+        `https://www.google.com/search?q=${encodeURIComponent(
+          book.title + book.authors.join()
+        )}`,
+        false,
+        new Date()
       ]
     ]);
 };
@@ -65,22 +71,34 @@ function getBookInfoFromAPI(isbn: string): IBook | undefined {
 }
 
 function setupBookObject(isbn: string, res: any): IBook {
-  const vol = res["items"][0]["volumeInfo"];
+  const vol = res.items[0].volumeInfo;
   const book = {
-    isbn: isbn,
-    url: res["items"][0]["selfLink"],
-    thumbnail: vol["imageLinks"]["thumbnail"],
-    title: vol["title"],
-    authors: vol["authors"],
-    publisher: vol["publisher"],
-    publishedDate: Moment.moment(vol["publishedDate"]).toDate()
+    isbn,
+    url: res.items[0].selfLink,
+    thumbnail: vol.imageLinks["thumbnail"],
+    title: vol.title,
+    authors: vol.authors,
+    publisher: vol.publisher,
+    publishedDate: Moment.moment(vol.publishedDate).toDate()
   } as IBook;
   return book;
 }
 
-function addBook(isbn: string): void {
+function addBook(isbn: string): boolean {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("books");
   const book = getBookInfoFromAPI(isbn);
-  const row = sheet.getLastRow() + 1;
-  setBookData(row, 1, book);
+  if (
+    sheet
+      .getRange("A2:A")
+      .getValues()
+      .map(e => e.toString())
+      .indexOf(book.isbn) < 0
+  ) {
+    const row = sheet.getLastRow() + 1;
+    setBookData(row, 1, book);
+    return true;
+  } else {
+    Logger.log(`${book.isbn} has already registered in books sheet`);
+    return false;
+  }
 }
