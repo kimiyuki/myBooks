@@ -5,26 +5,20 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>snap</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.8.0/css/bulma.min.css"/>
   <?!= HtmlService.createHtmlOutputFromFile("css").getContent() ?>
 </head>
 
 <body>
-  <div id="out"></div>
-  <div class="header">
-    <div class="columns is-centered is-mobile">
-      <h3 class="column is-half"><?= bookTitle ?></h3>
-      <h4 id="isbn"><?= isbn ?></h4>
-    </div>
-  </div>
-
+  <h4 style="text-align: center;"><?= bookTitle ?></h4>
   <div class="main">
     <video id="camera"></video>
     <canvas id="picture"></canvas>
   </div>
 
-  <div class="footer buttons flex-container">
-    <button class="button flex-item" id="snap" onclick="snap()">snap</button>
-    <button class="button flex-item" id="upload" onclick="upload()">upload</button>
+  <div class="buttons is-centered">
+    <button class="button is-large" id="snap" onclick="snap()">snap</button>
+    <button class="button is-large" id="upload" onclick="upload()">upload</button>
     <span id="uploading-msg"></span>
   </div>
 
@@ -92,7 +86,7 @@
       google.script.run
         .withSuccessHandler(() => {
           const msg = "バックボタンで戻ってください";
-          msgTag.innerHTML = msg; 
+          msgTag.innerHTML = msg;
           document.getElementById("out").innerText = msg;
         })
         .withFailureHandler(e => { console.log(e); })

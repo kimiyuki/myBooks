@@ -2,9 +2,17 @@ function procInSheet(isbn: string): boolean {
   return addBook(isbn);
 }
 
-function getTitle(isbn: string): string {
-  const title: string = "hello title #TODO2";
-  return title;
+function getTitle(isbn: string): string|undefined {
+  const data = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName("books")
+    .getRange("A2:B")
+    .getValues()
+    .filter(e => e[0].toString() === isbn);
+  if (data.length > 0) {
+    return data[0][1];
+  } else {
+    return undefined;
+  }
 }
 
 function doGet(e: any): GoogleAppsScript.HTML.HtmlOutput {
