@@ -20,6 +20,7 @@
   <div class="buttons is-centered">
     <button class="button is-large" id="snap" onclick="snap()">snap</button>
     <button class="button is-large" id="upload" onclick="upload()">upload</button>
+    <button class="button is-large" id="rotate" onclick="rotate()">rotate</button>
     <span id="uploading-msg"></span>
   </div>
 
@@ -28,6 +29,7 @@
     const canvas = document.querySelector("#picture");
     const w = 360
     const h = 480;
+    let viewPortOrientation = "portrait";
     canvas.height = w;
     canvas.width = h;
     console.log(canvas);
@@ -100,6 +102,24 @@
         )
       //.getGyazoImageUrl(document.querySelector("#picture").toDataURL(), location.href);
     }
+
+    window.addEventListener("deviceorientation", e => {
+      const tmp_viewPortOrientation = window.innerHeight > window.innerWidth ? "portrait" : "landscape";
+      if(viewPortOrientation !== tmp_viewPortOrientation){
+        viewPortOrientation = tmp_viewPortOrientation;
+        const tmp_w = video.videoWidth
+        video.videoWidth = video.videoHeight;
+        video.videoHeight = tmp_w;
+        console.log("orientation changed");
+      }
+    }, true);
+
+
+    function rotate(){
+      //
+      console.log('rotate');
+    }
+
     window.onload = () => {
       console.log(`viewport size:${window.innerWidth}:${window.innerHeight}`)
       console.log(`videoWidth,Height- ${video.videoWidth}:${video.videoHeight}`)
