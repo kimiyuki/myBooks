@@ -15,19 +15,20 @@ function onEdit(e: GoogleAppsScript.Events.SheetsOnEdit) {
   }
 }
 
-function deleteEmptyRows(){
-  _deleteEmptyRows("books");
-  _deleteEmptyRows("scraps");
-}
-
-function _deleteEmptyRows(sheetName: string) {
-  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  const n = sh.getLastRow();
-  // as deleting row get renumbered so from bottom to top is a better strategy..
-  for (let i = n; i > 1; i--) {
-    if (sh.getRange(i, 1).getValue() === "") {
-      sh.deleteRow(i);
+function deleteEmptyRows() {
+  const deleteEmptyRowsBySheet = (sheetName: string) => {
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+    const n = sh.getLastRow();
+    // as deleting row get renumbered so from bottom to top is a better strategy..
+    for (let i = n; i > 1; i--) {
+      if (sh.getRange(i, 1).getValue() === "") {
+        sh.deleteRow(i);
+      }
     }
+  };
+
+  for (const sh of ["books", "scraps"]) {
+    deleteEmptyRowsBySheet(sh);
   }
 }
 
