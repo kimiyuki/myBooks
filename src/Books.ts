@@ -47,7 +47,7 @@ const setBookData = (row: number, startCol: number, book: IBook) => {
 interface IBook {
   isbn: string;
   url: string;
-  thumbnail: string;
+  thumbnail: string | undefined;
   title: string;
   authors: string[];
   publisher: string;
@@ -75,7 +75,7 @@ function setupBookObject(isbn: string, res: any): IBook {
   const book = {
     isbn,
     url: res.items[0].selfLink,
-    thumbnail: vol.imageLinks["thumbnail"],
+    thumbnail: vol.imageLinks ? vol.imageLinks.thumbnail : undefined,
     title: vol.title,
     authors: vol.authors,
     publisher: vol.publisher,
