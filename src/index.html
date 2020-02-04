@@ -12,6 +12,7 @@
 <body>
   <h4 style="text-align: center;"><?= bookTitle ?></h4>
   <span id="isbn" style="display:none;"><?= isbn ?></span>
+  <span id="test"></span>
   <div class="main">
     <video id="camera"></video>
     <canvas id="picture"></canvas>
@@ -25,10 +26,11 @@
   </div>
 
   <script>
+    screen.orientation.lock("portrait");
     const video = document.querySelector("#camera");
     const canvas = document.querySelector("#picture");
-    const w = 360
-    const h = 480;
+    const w = 300 
+    const h = 300;
     let viewPortOrientation = "portrait";
     canvas.height = w;
     canvas.width = h;
@@ -38,6 +40,7 @@
       audio: false,
       video: {
         width: { ideal: 4096 }, height: { ideal: 2160 },
+        //width: { ideal: 2160 }, height: { ideal: 2160 },
         facingMode: (front ? "user" : "environment")
       }
     };
@@ -102,22 +105,19 @@
         )
       //.getGyazoImageUrl(document.querySelector("#picture").toDataURL(), location.href);
     }
-
     window.addEventListener("deviceorientation", e => {
       const tmp_viewPortOrientation = window.innerHeight > window.innerWidth ? "portrait" : "landscape";
-      if(viewPortOrientation !== tmp_viewPortOrientation){
-        viewPortOrientation = tmp_viewPortOrientation;
-        const tmp_w = video.videoWidth
-        video.videoWidth = video.videoHeight;
-        video.videoHeight = tmp_w;
-        console.log("orientation changed");
-      }
+      document.getElementById("test").innerText =
+        viewPortOrientation + " : " + window.innerHeight + " : " + window.innerWidth;
+      (window.innerHeight > window.innerWidth) ? turnPortrait() : turnLandscape();
     }, true);
 
 
-    function rotate(){
-      //
-      console.log('rotate');
+    function turnPortrait() {
+      console.log('rotate3');
+    }
+    function turnLandscape() {
+      console.log('rotate3');
     }
 
     window.onload = () => {
