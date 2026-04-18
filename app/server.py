@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import json
 import mimetypes
 import os
@@ -32,6 +34,16 @@ SELECT
   registered_at,
   updated_at
 FROM books
+"""
+
+SCRAPS_SELECT = """
+SELECT
+  id,
+  book_isbn,
+  page,
+  image_path,
+  created_at
+FROM scraps
 """
 
 
@@ -90,6 +102,113 @@ def normalize_google_published_date(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def normalize_page(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    page = int(text)
+    if page < 0:
+        raise ValueError("page must be 0 or greater")
+    return page
+
+
+def parse_data_url_image(data_url: str) -> tuple[bytes, str]:
+    if not isinstance(data_url, str) or not data_url.startswith("data:image/"):
+        raise ValueError("image_data_url must be a data URL for an image")
+    header, _, encoded = data_url.partition(",")
+    if ";base64" not in header or not encoded:
+        raise ValueError("image_data_url must be a base64-encoded image")
+    mime_type = header[5:].split(";", 1)[0]
+    if mime_type not in {"image/jpeg", "image/png"}:
+        raise ValueError("only jpeg and png scrap images are supported")
+    try:
+        image_bytes = base64.b64decode(encoded, validate=True)
+    except binascii.Error as exc:
+        raise ValueError("image_data_url is not valid base64") from exc
+    return image_bytes, mime_type
+
+
+def file_extension_for_mime_type(mime_type: str) -> str:
+    if mime_type == "image/jpeg":
+        return ".jpg"
+    if mime_type == "image/png":
+        return ".png"
+    raise ValueError(f"unsupported mime type: {mime_type}")
+
+
+def row_to_book(row: sqlite3.Row | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    return dict(row)
+
+
+def scrap_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+    data = dict(row)
+    data["media_url"] = f"/media/{data['image_path']}"
+    return data
+
+
+def attach_book_scrap_summaries(
+    connection: sqlite3.Connection, books: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    if not books:
+        return books
+
+    isbns = [book["isbn"] for book in books]
+    placeholders = ", ".join("?" for _ in isbns)
+
+    count_rows = connection.execute(
+        f"""
+        SELECT book_isbn, COUNT(*) AS scrap_count
+        FROM scraps
+        WHERE book_isbn IN ({placeholders})
+        GROUP BY book_isbn
+        """,
+        isbns,
+    ).fetchall()
+    counts = {row["book_isbn"]: row["scrap_count"] for row in count_rows}
+
+    preview_rows = connection.execute(
+        f"""
+        SELECT id, book_isbn, page, image_path, created_at
+        FROM (
+          SELECT
+            id,
+            book_isbn,
+            page,
+            image_path,
+            created_at,
+            ROW_NUMBER() OVER (
+              PARTITION BY book_isbn
+              ORDER BY created_at DESC, id DESC
+            ) AS row_number
+          FROM scraps
+          WHERE book_isbn IN ({placeholders})
+        )
+        WHERE row_number <= 2
+        ORDER BY book_isbn, created_at DESC, id DESC
+        """,
+        isbns,
+    ).fetchall()
+
+    previews_by_isbn: dict[str, list[dict[str, Any]]] = {}
+    for row in preview_rows:
+        previews_by_isbn.setdefault(row["book_isbn"], []).append(scrap_row_to_dict(row))
+
+    for book in books:
+        book["scrap_count"] = counts.get(book["isbn"], 0)
+        book["scrap_previews"] = previews_by_isbn.get(book["isbn"], [])
+    return books
+
+
+def ensure_runtime_schema(db_path: Path, schema_path: Path) -> None:
+    schema_sql = schema_path.read_text(encoding="utf-8")
+    with sqlite3.connect(db_path) as connection:
+        connection.executescript(schema_sql)
 
 
 def fetch_google_book_by_isbn(isbn: str) -> dict[str, Any]:
@@ -152,8 +271,9 @@ def fetch_google_book_by_isbn(isbn: str) -> dict[str, Any]:
 class MyBooksHandler(SimpleHTTPRequestHandler):
     server_version = "MyBooksHTTP/0.1"
 
-    def __init__(self, *args: Any, db_path: Path, directory: Path, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, db_path: Path, media_root: Path, directory: Path, **kwargs: Any) -> None:
         self.db_path = db_path
+        self.media_root = media_root
         super().__init__(*args, directory=str(directory), **kwargs)
 
     def log_message(self, format: str, *args: Any) -> None:
@@ -161,11 +281,17 @@ class MyBooksHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if parsed.path.startswith("/media/"):
+            self.handle_media_get(parsed.path)
+            return
         if parsed.path == "/api/health":
             self.respond_json(HTTPStatus.OK, {"ok": True})
             return
         if parsed.path == "/api/books":
             self.handle_list_books(parsed.query)
+            return
+        if parsed.path.startswith("/api/books/"):
+            self.handle_book_api_get(parsed.path)
             return
         if parsed.path == "/":
             self.path = "/index.html"
@@ -175,6 +301,9 @@ class MyBooksHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/books":
             self.handle_add_book()
+            return
+        if parsed.path.startswith("/api/books/"):
+            self.handle_book_api_post(parsed.path)
             return
         self.respond_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
 
@@ -213,7 +342,47 @@ class MyBooksHandler(SimpleHTTPRequestHandler):
     def connect_db(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path)
         connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
         return connection
+
+    def get_book(self, connection: sqlite3.Connection, isbn: str) -> sqlite3.Row | None:
+        return connection.execute(
+            f"{BOOKS_SELECT} WHERE isbn = ?",
+            (isbn,),
+        ).fetchone()
+
+    def handle_book_api_get(self, path: str) -> None:
+        parts = path.strip("/").split("/")
+        if len(parts) < 3:
+            self.respond_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
+            return
+
+        try:
+            isbn = normalize_isbn(parts[2])
+        except ValueError as exc:
+            self.respond_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
+
+        if len(parts) == 3:
+            self.handle_get_book_detail(isbn)
+            return
+        if len(parts) == 4 and parts[3] == "scraps":
+            self.handle_list_scraps(isbn)
+            return
+
+        self.respond_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
+
+    def handle_book_api_post(self, path: str) -> None:
+        parts = path.strip("/").split("/")
+        if len(parts) == 4 and parts[0] == "api" and parts[1] == "books" and parts[3] == "scraps":
+            try:
+                isbn = normalize_isbn(parts[2])
+            except ValueError as exc:
+                self.respond_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self.handle_create_scrap(isbn)
+            return
+        self.respond_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
 
     def handle_list_books(self, query_string: str) -> None:
         params = parse_qs(query_string)
@@ -237,6 +406,7 @@ class MyBooksHandler(SimpleHTTPRequestHandler):
 
         with self.connect_db() as connection:
             books = [dict(row) for row in connection.execute("\n".join(sql), bindings).fetchall()]
+            books = attach_book_scrap_summaries(connection, books)
 
         self.respond_json(
             HTTPStatus.OK,
@@ -255,10 +425,7 @@ class MyBooksHandler(SimpleHTTPRequestHandler):
             return
 
         with self.connect_db() as connection:
-            existing = connection.execute(
-                "SELECT isbn, title FROM books WHERE isbn = ?",
-                (isbn,),
-            ).fetchone()
+            existing = connection.execute("SELECT isbn, title FROM books WHERE isbn = ?", (isbn,)).fetchone()
             if existing is not None:
                 self.respond_json(
                     HTTPStatus.CONFLICT,
@@ -307,12 +474,106 @@ class MyBooksHandler(SimpleHTTPRequestHandler):
                     timestamp,
                 ),
             )
-            book = connection.execute(
-                f"{BOOKS_SELECT} WHERE isbn = ?",
-                (isbn,),
-            ).fetchone()
+            book = self.get_book(connection, isbn)
 
         self.respond_json(HTTPStatus.CREATED, {"book": dict(book)})
+
+    def handle_get_book_detail(self, isbn: str) -> None:
+        with self.connect_db() as connection:
+            book = self.get_book(connection, isbn)
+        if book is None:
+            self.respond_json(HTTPStatus.NOT_FOUND, {"error": "book not found"})
+            return
+        self.respond_json(HTTPStatus.OK, {"book": dict(book)})
+
+    def handle_list_scraps(self, isbn: str) -> None:
+        with self.connect_db() as connection:
+            book = self.get_book(connection, isbn)
+            if book is None:
+                self.respond_json(HTTPStatus.NOT_FOUND, {"error": "book not found"})
+                return
+            scraps = [
+                scrap_row_to_dict(row)
+                for row in connection.execute(
+                    f"{SCRAPS_SELECT} WHERE book_isbn = ? ORDER BY created_at DESC, id DESC",
+                    (isbn,),
+                ).fetchall()
+            ]
+        self.respond_json(HTTPStatus.OK, {"book": dict(book), "scraps": scraps})
+
+    def handle_create_scrap(self, isbn: str) -> None:
+        try:
+            payload = self.read_json_body()
+            image_data_url = payload.get("image_data_url")
+            image_bytes, mime_type = parse_data_url_image(image_data_url)
+            page = normalize_page(payload.get("page"))
+        except ValueError as exc:
+            self.respond_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
+
+        timestamp = utc_now_text()
+        timestamp_slug = timestamp.replace(":", "").replace("-", "")
+        suffix = file_extension_for_mime_type(mime_type)
+        relative_dir = Path("scraps") / isbn
+        filename = f"{timestamp_slug}{suffix}"
+        relative_path = relative_dir / filename
+        absolute_dir = self.media_root / relative_dir
+        absolute_path = self.media_root / relative_path
+        absolute_dir.mkdir(parents=True, exist_ok=True)
+        absolute_path.write_bytes(image_bytes)
+
+        with self.connect_db() as connection:
+            book = self.get_book(connection, isbn)
+            if book is None:
+                absolute_path.unlink(missing_ok=True)
+                self.respond_json(HTTPStatus.NOT_FOUND, {"error": "book not found"})
+                return
+
+            connection.execute(
+                """
+                INSERT INTO scraps (
+                  book_isbn,
+                  page,
+                  image_path,
+                  created_at
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (
+                    isbn,
+                    page,
+                    relative_path.as_posix(),
+                    timestamp,
+                ),
+            )
+            scrap = connection.execute(
+                f"{SCRAPS_SELECT} WHERE image_path = ?",
+                (relative_path.as_posix(),),
+            ).fetchone()
+
+        self.respond_json(HTTPStatus.CREATED, {"scrap": scrap_row_to_dict(scrap)})
+
+    def handle_media_get(self, path: str) -> None:
+        relative_path = path.removeprefix("/media/").strip("/")
+        if not relative_path:
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+
+        candidate = (self.media_root / relative_path).resolve()
+        media_root_resolved = self.media_root.resolve()
+        if media_root_resolved not in candidate.parents and candidate != media_root_resolved:
+            self.send_error(HTTPStatus.FORBIDDEN)
+            return
+        if not candidate.exists() or not candidate.is_file():
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+
+        content_type = mimetypes.guess_type(candidate.name)[0] or "application/octet-stream"
+        data = candidate.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
 
 def main() -> int:
@@ -324,7 +585,13 @@ def main() -> int:
         raise SystemExit(f"database not found: {db_path}")
 
     static_dir = Path(__file__).resolve().parent / "static"
-    handler = partial(MyBooksHandler, db_path=db_path, directory=static_dir)
+    ensure_runtime_schema(db_path, repo_root / "scripts" / "schema.sql")
+    handler = partial(
+        MyBooksHandler,
+        db_path=db_path,
+        media_root=db_path.parent,
+        directory=static_dir,
+    )
     server = ThreadingHTTPServer((args.host, args.port), handler)
 
     print(f"MyBooks server listening on http://{args.host}:{args.port}")

@@ -64,6 +64,12 @@ SQLite 正本へ移す初期実装を `scripts/` に置いています。
 - 読み取りに成功すると ISBN をそのまま追加する
 - 端末が `BarcodeDetector` 非対応なら手入力で追加する
 
+### book detail and scraps
+
+- 一覧から本を開くと詳細画面へ移動する
+- 詳細画面の `撮影する` から、その本に紐づく scrap 写真を保存できる
+- scrap 画像はローカルの `data/scraps/<isbn>/` 配下へ保存する
+
 ### expose the local web app over Tailscale
 
 1. ローカル Web アプリを `127.0.0.1:8000` で起動する

@@ -84,6 +84,13 @@ function normalizeIsbn(text) {
     .toUpperCase();
 }
 
+function normalizeThumbnailUrl(url) {
+  if (!url) {
+    return "";
+  }
+  return String(url).replace(/^http:\/\//, "https://");
+}
+
 function isValidIsbn13(isbn) {
   if (!/^\d{13}$/.test(isbn)) {
     return false;
@@ -149,6 +156,7 @@ function renderBooks(books) {
 
   for (const book of books) {
     const node = template.content.firstElementChild.cloneNode(true);
+    const link = node.querySelector(".book-link");
     const thumb = node.querySelector(".thumb");
     const title = node.querySelector(".book-title");
     const authors = node.querySelector(".book-authors");
@@ -157,9 +165,13 @@ function renderBooks(books) {
     const bookDate = node.querySelector(".book-date");
     const bookRegistered = node.querySelector(".book-registered");
     const favoriteChip = node.querySelector(".favorite-chip");
+    const scrapStrip = node.querySelector(".scrap-strip");
+    const scrapStripCount = node.querySelector(".scrap-strip-count");
+    const scrapPreviewList = node.querySelector(".scrap-preview-list");
 
+    link.href = `/book.html?isbn=${encodeURIComponent(book.isbn)}`;
     if (book.thumbnail_url) {
-      thumb.src = book.thumbnail_url;
+      thumb.src = normalizeThumbnailUrl(book.thumbnail_url);
       thumb.alt = `${book.title} の表紙`;
     } else {
       thumb.replaceWith(document.createTextNode("No image"));
@@ -175,6 +187,31 @@ function renderBooks(books) {
 
     if (book.favorite) {
       favoriteChip.hidden = false;
+    }
+
+    if (book.scrap_count > 0) {
+      scrapStripCount.textContent = `${book.scrap_count}枚`;
+      for (const scrap of book.scrap_previews) {
+        const preview = document.createElement("div");
+        preview.className = "scrap-preview-card";
+        if (book.scrap_previews.length === 1) {
+          preview.classList.add("scrap-preview-card-single");
+        }
+
+        const image = document.createElement("img");
+        image.className = "scrap-preview-image";
+        image.src = scrap.media_url;
+        image.alt = scrap.page == null ? "scrap" : `page ${scrap.page} の scrap`;
+
+        const label = document.createElement("span");
+        label.className = "scrap-preview-page";
+        label.textContent = scrap.page == null ? "page -" : `page ${scrap.page}`;
+
+        preview.append(image, label);
+        scrapPreviewList.appendChild(preview);
+      }
+    } else {
+      scrapStrip.hidden = true;
     }
 
     fragment.appendChild(node);

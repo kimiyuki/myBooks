@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyBooks Detail</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="detail-shell">
+      <section class="detail-header-band">
+        <div class="detail-header">
+          <a class="back-link" href="/">一覧へ戻る</a>
+          <p id="detail-status" class="status-text"></p>
+        </div>
+      </section>
+
+      <section class="detail-main">
+        <article id="book-detail-card" class="detail-card" hidden>
+          <div class="detail-card-main">
+            <div class="detail-thumb-wrap">
+              <img id="detail-thumb" class="detail-thumb" alt="" />
+            </div>
+            <div class="detail-meta">
+              <div class="title-row">
+                <h1 id="detail-title" class="detail-title"></h1>
+                <span id="detail-favorite" class="favorite-chip" hidden>favorite</span>
+              </div>
+              <p id="detail-authors" class="detail-authors"></p>
+              <p id="detail-publisher" class="detail-publisher"></p>
+              <div class="book-facts">
+                <span id="detail-isbn"></span>
+                <span id="detail-published-date"></span>
+                <span id="detail-registered-at"></span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <section class="detail-section">
+          <div class="detail-section-header">
+            <div>
+              <h2 class="detail-section-title">Scrap</h2>
+              <p class="detail-section-caption">この本だけの写真を残します</p>
+            </div>
+            <button id="scrap-toggle-button" type="button" class="toolbar-chip toolbar-chip-strong">
+              撮影する
+            </button>
+          </div>
+
+          <section id="scrap-capture-panel" class="scanner-panel" hidden>
+            <label class="field">
+              <span class="field-label">ページ番号</span>
+              <input id="scrap-page-input" type="number" min="0" inputmode="numeric" placeholder="任意" />
+            </label>
+            <div class="scanner-header">
+              <div>
+                <p class="scanner-title">Scrap 撮影</p>
+                <p class="scanner-caption">写したいページを中央に入れて保存します</p>
+              </div>
+              <button id="scrap-close-button" type="button" class="button-secondary">閉じる</button>
+            </div>
+            <div class="scanner-viewport">
+              <video id="scrap-video" class="scanner-video" playsinline muted></video>
+              <canvas id="scrap-canvas" class="scanner-video scrap-canvas" hidden></canvas>
+            </div>
+            <div class="scrap-actions">
+              <button id="scrap-start-button" type="button">カメラ開始</button>
+              <button id="scrap-capture-button" type="button" class="button-secondary" disabled>
+                撮影
+              </button>
+              <button id="scrap-retake-button" type="button" class="button-secondary" hidden>
+                撮り直す
+              </button>
+              <button id="scrap-save-button" type="button" disabled hidden>保存</button>
+            </div>
+            <p id="scrap-status" class="scanner-status"></p>
+          </section>
+
+          <ul id="scrap-list" class="scrap-list"></ul>
+        </section>
+      </section>
+    </main>
+
+    <template id="scrap-item-template">
+      <li class="scrap-item">
+        <img class="scrap-image" alt="" loading="lazy" />
+        <div class="scrap-meta">
+          <p class="scrap-page"></p>
+          <p class="scrap-created-at"></p>
+        </div>
+      </li>
+    </template>
+
+    <script src="/book.js" type="module"></script>
+  </body>
+</html>

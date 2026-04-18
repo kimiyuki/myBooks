@@ -24,38 +24,38 @@
           </button>
         </div>
         <section id="register-panel" class="register-panel" hidden>
-        <form id="add-form" class="add-form">
-          <label class="field isbn-field">
-            <span class="field-label">ISBN 追加</span>
-            <input
-              id="isbn-input"
-              type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              placeholder="978..."
-            />
-          </label>
-          <div class="add-actions">
-            <button id="add-button" type="submit">Google Books から追加</button>
-            <button id="scan-button" type="button" class="button-secondary">スキャンで追加</button>
-          </div>
-        </form>
-        <section id="scanner-panel" class="scanner-panel" hidden>
-          <div class="scanner-header">
-            <div>
-              <p class="scanner-title">バーコード読み取り</p>
-              <p class="scanner-caption">背面カメラで ISBN バーコードを写してください</p>
+          <form id="add-form" class="add-form">
+            <label class="field isbn-field">
+              <span class="field-label">ISBN 追加</span>
+              <input
+                id="isbn-input"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="978..."
+              />
+            </label>
+            <div class="add-actions">
+              <button id="add-button" type="submit">Google Books から追加</button>
+              <button id="scan-button" type="button" class="button-secondary">スキャンで追加</button>
             </div>
-            <button id="scanner-close-button" type="button" class="button-secondary">
-              閉じる
-            </button>
-          </div>
-          <div class="scanner-viewport">
-            <video id="scanner-video" class="scanner-video" playsinline muted></video>
-            <div class="scanner-guide" aria-hidden="true"></div>
-          </div>
-          <p id="scanner-status" class="scanner-status"></p>
-        </section>
+          </form>
+          <section id="scanner-panel" class="scanner-panel" hidden>
+            <div class="scanner-header">
+              <div>
+                <p class="scanner-title">バーコード読み取り</p>
+                <p class="scanner-caption">背面カメラで ISBN バーコードを写してください</p>
+              </div>
+              <button id="scanner-close-button" type="button" class="button-secondary">
+                閉じる
+              </button>
+            </div>
+            <div class="scanner-viewport">
+              <video id="scanner-video" class="scanner-video" playsinline muted></video>
+              <div class="scanner-guide" aria-hidden="true"></div>
+            </div>
+            <p id="scanner-status" class="scanner-status"></p>
+          </section>
         </section>
         <div class="status-row">
           <p id="status-text" class="status-text"></p>
@@ -70,22 +70,31 @@
 
     <template id="book-item-template">
       <li class="book-item">
-        <div class="thumb-wrap">
-          <img class="thumb" alt="" loading="lazy" />
-        </div>
-        <div class="book-meta">
-          <div class="title-row">
-            <h2 class="book-title"></h2>
-            <span class="favorite-chip" hidden>favorite</span>
+        <a class="book-link">
+          <div class="thumb-wrap">
+            <img class="thumb" alt="" loading="lazy" />
           </div>
-          <p class="book-authors"></p>
-          <p class="book-publisher"></p>
-          <div class="book-facts">
-            <span class="book-isbn"></span>
-            <span class="book-date"></span>
-            <span class="book-registered"></span>
+          <div class="book-meta">
+            <div class="title-row">
+              <h2 class="book-title"></h2>
+              <span class="favorite-chip" hidden>favorite</span>
+            </div>
+            <p class="book-authors"></p>
+            <p class="book-publisher"></p>
+            <div class="book-facts">
+              <span class="book-isbn"></span>
+              <span class="book-date"></span>
+              <span class="book-registered"></span>
+            </div>
+            <div class="scrap-strip">
+              <div class="scrap-strip-header">
+                <span class="scrap-strip-label">scrap</span>
+                <span class="scrap-strip-count"></span>
+              </div>
+              <div class="scrap-preview-list"></div>
+            </div>
           </div>
-        </div>
+        </a>
       </li>
     </template>
 
