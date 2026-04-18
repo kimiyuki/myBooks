@@ -4,6 +4,7 @@ log.json
 out.log
 .clasp.json
 .env
+.env.local
 *.swp
 __pycache__/
 data/*.db

@@ -55,4 +55,26 @@ SQLite 正本へ移す初期実装を `scripts/` に置いています。
 ```
 
 一覧 API は `/api/books`、ISBN 追加は `POST /api/books` です。
-匿名 quota で Google Books が 429 を返す環境では、`GOOGLE_BOOKS_API_KEY` を設定してから起動してください。
+匿名 quota で Google Books が 429 を返す環境では、repo root の `.env.local` に `GOOGLE_BOOKS_API_KEY=...` を入れてから起動してください。`app/server.py` は起動時に `.env.local` を読みます。
+
+### barcode scanning
+
+- 一覧画面の `スキャンで追加` からバーコード読み取りを開始する
+- Android では Tailscale HTTPS URL で開いてから使う
+- 読み取りに成功すると ISBN をそのまま追加する
+- 端末が `BarcodeDetector` 非対応なら手入力で追加する
+
+### expose the local web app over Tailscale
+
+1. ローカル Web アプリを `127.0.0.1:8000` で起動する
+2. そのポートを Tailscale HTTPS で tailnet 内公開する
+
+```bash
+tailscale serve --bg --https=443 127.0.0.1:8000
+tailscale serve status
+```
+
+補足:
+
+- Android からカメラを使う前提では、raw IP ではなく `https://<node>.<tailnet>.ts.net/` で開く
+- 既存設定を消してやり直すときは `tailscale serve reset`

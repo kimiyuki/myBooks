@@ -35,6 +35,21 @@ FROM books
 """
 
 
+def load_dotenv(dotenv_path: Path) -> None:
+    if not dotenv_path.exists():
+        return
+
+    for line in dotenv_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("'").strip('"')
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the MyBooks local web app.")
     parser.add_argument(
@@ -115,15 +130,19 @@ def fetch_google_book_by_isbn(isbn: str) -> dict[str, Any]:
     authors = volume_info.get("authors") or []
     if not title:
         raise RuntimeError("google books returned a record without title")
-    if not authors:
-        raise RuntimeError("google books returned a record without authors")
+
+    normalized_authors = ", ".join(
+        str(author).strip() for author in authors if str(author).strip()
+    )
+    if not normalized_authors:
+        normalized_authors = "著者未設定"
 
     image_links = volume_info.get("imageLinks") or {}
     return {
         "isbn": isbn,
         "title": title,
         "thumbnail_url": image_links.get("thumbnail") or image_links.get("smallThumbnail"),
-        "authors": ", ".join(str(author).strip() for author in authors if str(author).strip()),
+        "authors": normalized_authors,
         "publisher": (str(volume_info.get("publisher")).strip() if volume_info.get("publisher") else None),
         "published_date": normalize_google_published_date(volume_info.get("publishedDate")),
         "amazon_url": None,
@@ -298,6 +317,8 @@ class MyBooksHandler(SimpleHTTPRequestHandler):
 
 def main() -> int:
     args = parse_args()
+    repo_root = Path(__file__).resolve().parent.parent
+    load_dotenv(repo_root / ".env.local")
     db_path = args.db.resolve()
     if not db_path.exists():
         raise SystemExit(f"database not found: {db_path}")
