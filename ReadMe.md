@@ -20,3 +20,39 @@
 ## setup
 
 ## development
+
+## design docs
+
+- `docs/architecture.md`
+- `docs/decisions/ADR-2026-04-18-local-first-web-architecture.md`
+
+## local-first restart
+
+SQLite 正本へ移す初期実装を `scripts/` に置いています。
+
+### import legacy xlsx to sqlite
+
+`openpyxl` が必要です。Codex で検証したときは bundled runtime の Python を使いました。
+
+```bash
+/Users/shirai/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 \
+  scripts/import_mybooks_xlsx.py \
+  --input /Users/shirai/Downloads/MyBooks.xlsx \
+  --output data/mybooks.db \
+  --replace
+```
+
+作成される SQLite schema は `scripts/schema.sql` にあります。
+
+### run local web app
+
+```bash
+/Users/shirai/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 \
+  app/server.py \
+  --db data/mybooks.db \
+  --host 127.0.0.1 \
+  --port 8000
+```
+
+一覧 API は `/api/books`、ISBN 追加は `POST /api/books` です。
+匿名 quota で Google Books が 429 を返す環境では、`GOOGLE_BOOKS_API_KEY` を設定してから起動してください。
