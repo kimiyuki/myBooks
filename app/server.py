@@ -10,6 +10,7 @@ import json
 import mimetypes
 import os
 import sqlite3
+import time
 from datetime import datetime
 from functools import partial
 from http import HTTPStatus
@@ -101,6 +102,19 @@ def normalize_google_published_date(value: Any) -> str | None:
     if value is None:
         return None
     text = str(value).strip()
+    return text or None
+
+
+def normalize_openbd_published_date(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if len(text) == 8 and text.isdigit():
+        return f"{text[:4]}-{text[4:6]}-{text[6:]}"
+    if len(text) == 6 and text.isdigit():
+        return f"{text[:4]}-{text[4:6]}"
+    if len(text) == 4 and text.isdigit():
+        return text
     return text or None
 
 
@@ -211,6 +225,27 @@ def ensure_runtime_schema(db_path: Path, schema_path: Path) -> None:
         connection.executescript(schema_sql)
 
 
+def read_error_payload(exc: HTTPError) -> dict[str, Any] | None:
+    try:
+        raw = exc.read()
+    except Exception:
+        return None
+    if not raw:
+        return None
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except Exception:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def is_temporary_google_books_error(exc: HTTPError) -> bool:
+    payload = read_error_payload(exc)
+    errors = payload.get("error", {}).get("errors", []) if payload else []
+    reasons = [str(item.get("reason", "")).strip() for item in errors if isinstance(item, dict)]
+    return exc.code == 503 and "backendFailed" in reasons
+
+
 def fetch_google_book_by_isbn(isbn: str) -> dict[str, Any]:
     query_params = {
         "q": f"isbn:{isbn}",
@@ -227,17 +262,30 @@ def fetch_google_book_by_isbn(isbn: str) -> dict[str, Any]:
             "User-Agent": "MyBooks/0.1 (+local-first)",
         },
     )
-    try:
-        with urlopen(request, timeout=10) as response:
-            payload = json.load(response)
-    except HTTPError as exc:
-        if exc.code == 429 and not api_key:
-            raise RuntimeError(
-                "google books quota exceeded. Set GOOGLE_BOOKS_API_KEY and retry."
-            ) from exc
-        raise RuntimeError(f"google books request failed: {exc.code}") from exc
-    except URLError as exc:
-        raise RuntimeError(f"google books request failed: {exc.reason}") from exc
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            with urlopen(request, timeout=10) as response:
+                payload = json.load(response)
+            break
+        except HTTPError as exc:
+            last_error = exc
+            if exc.code == 429 and not api_key:
+                raise RuntimeError(
+                    "google books quota exceeded. Set GOOGLE_BOOKS_API_KEY and retry."
+                ) from exc
+            if is_temporary_google_books_error(exc) and attempt < 2:
+                time.sleep(0.6 * (attempt + 1))
+                continue
+            raise RuntimeError(f"google books request failed: {exc.code}") from exc
+        except URLError as exc:
+            last_error = exc
+            if attempt < 2:
+                time.sleep(0.6 * (attempt + 1))
+                continue
+            raise RuntimeError(f"google books request failed: {exc.reason}") from exc
+    else:
+        raise RuntimeError("google books request failed") from last_error
 
     total_items = payload.get("totalItems", 0)
     items = payload.get("items") or []
@@ -266,6 +314,57 @@ def fetch_google_book_by_isbn(isbn: str) -> dict[str, Any]:
         "published_date": normalize_google_published_date(volume_info.get("publishedDate")),
         "amazon_url": None,
     }
+
+
+def fetch_openbd_book_by_isbn(isbn: str) -> dict[str, Any]:
+    url = f"https://api.openbd.jp/v1/get?isbn={isbn}"
+    request = Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "MyBooks/0.1 (+local-first)",
+        },
+    )
+    try:
+        with urlopen(request, timeout=10) as response:
+            payload = json.load(response)
+    except HTTPError as exc:
+        raise RuntimeError(f"openBD request failed: {exc.code}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"openBD request failed: {exc.reason}") from exc
+
+    if not isinstance(payload, list) or not payload or payload[0] is None:
+        raise LookupError(f"isbn {isbn} was not found in openBD")
+
+    record = payload[0]
+    summary = record.get("summary") or {}
+    title = str(summary.get("title") or "").strip()
+    authors = str(summary.get("author") or "").replace(",", ", ").strip()
+    if not title:
+        raise RuntimeError("openBD returned a record without title")
+    if not authors:
+        authors = "著者未設定"
+
+    return {
+        "isbn": isbn,
+        "title": title,
+        "thumbnail_url": str(summary.get("cover") or "").strip() or None,
+        "authors": authors,
+        "publisher": str(summary.get("publisher") or "").strip() or None,
+        "published_date": normalize_openbd_published_date(summary.get("pubdate")),
+        "amazon_url": None,
+    }
+
+
+def fetch_book_by_isbn(isbn: str) -> dict[str, Any]:
+    try:
+        return fetch_google_book_by_isbn(isbn)
+    except LookupError:
+        raise
+    except RuntimeError as exc:
+        if "503" not in str(exc):
+            raise
+    return fetch_openbd_book_by_isbn(isbn)
 
 
 class MyBooksHandler(SimpleHTTPRequestHandler):
@@ -437,7 +536,7 @@ class MyBooksHandler(SimpleHTTPRequestHandler):
                 return
 
             try:
-                fetched = fetch_google_book_by_isbn(isbn)
+                fetched = fetch_book_by_isbn(isbn)
             except LookupError as exc:
                 self.respond_json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
                 return
