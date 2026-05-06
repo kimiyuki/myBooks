@@ -1,50 +1,12 @@
-# 書籍管理を Apps Scriptと GlideApps.ioで作る
+# MyBooks
 
-できれば、管理する本単位で撮ったスナップ写真？も管理できるようにする
+自分用のローカル書籍管理アプリです。
 
-<img src="https://i.gyazo.com/d708db7c1243fa9a2b4928672397e187.jpg" width="50px"/>
-<img src="https://i.gyazo.com/2c03509cf6d3c4491ff08884f11a540f.png" width="100px"/>
+Mac mini 上で `app/server.py` を `127.0.0.1:8000` に立ち上げ、Tailscale HTTPS 経由でスマホからアクセスします。スマホでは本の登録、バーコード読み取り、本ごとの scrap 写真撮影を行います。
 
-> 参考にする 
-- [GAS×スプレッドシート×GlideApps×Slack×Pic2shopで作る書籍管理アプリの実装 - Qiita](https://qiita.com/mgmgOmO/items/0c1e14385875ac30878a)
-## Claspの始め方
+## いつもの起動
 
-以下を参考にする
-(https://qiita.com/mgmgOmO/items/0c1e14385875ac30878a)
-- [Google Apps ScriptをTypeScriptで実装する(clasp/TSLint/Prettier) #gas #typescript - My External Storage](https://budougumi0617.github.io/2019/01/16/develop-google-apps-script-by-typescript/)
-- [google/clasp: 🔗 Command Line Apps Script Projects](https://github.com/google/clasp)
-
-## install
-
-
-## setup
-
-## development
-
-## design docs
-
-- `docs/architecture.md`
-- `docs/decisions/ADR-2026-04-18-local-first-web-architecture.md`
-
-## local-first restart
-
-SQLite 正本へ移す初期実装を `scripts/` に置いています。
-
-### import legacy xlsx to sqlite
-
-`openpyxl` が必要です。Codex で検証したときは bundled runtime の Python を使いました。
-
-```bash
-/Users/shirai/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 \
-  scripts/import_mybooks_xlsx.py \
-  --input /Users/shirai/Downloads/MyBooks.xlsx \
-  --output data/mybooks.db \
-  --replace
-```
-
-作成される SQLite schema は `scripts/schema.sql` にあります。
-
-### run local web app
+repo root で次を実行します。
 
 ```bash
 /Users/shirai/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 \
@@ -54,33 +16,99 @@ SQLite 正本へ移す初期実装を `scripts/` に置いています。
   --port 8000
 ```
 
-一覧 API は `/api/books`、ISBN 追加は `POST /api/books` です。
-匿名 quota で Google Books が 429 を返す環境では、repo root の `.env.local` に `GOOGLE_BOOKS_API_KEY=...` を入れてから起動してください。`app/server.py` は起動時に `.env.local` を読みます。
+ローカル確認:
 
-### barcode scanning
+- Web app: `http://127.0.0.1:8000`
+- Health check: `http://127.0.0.1:8000/api/health`
+- Books API: `http://127.0.0.1:8000/api/books`
 
-- 一覧画面の `スキャンで追加` からバーコード読み取りを開始する
-- Android では Tailscale HTTPS URL で開いてから使う
-- 読み取りに成功すると ISBN をそのまま追加する
-- 端末が `BarcodeDetector` 非対応なら手入力で追加する
+## スマホから使う
 
-### book detail and scraps
-
-- 一覧から本を開くと詳細画面へ移動する
-- 詳細画面の `撮影する` から、その本に紐づく scrap 写真を保存できる
-- scrap 画像はローカルの `data/scraps/<isbn>/` 配下へ保存する
-
-### expose the local web app over Tailscale
-
-1. ローカル Web アプリを `127.0.0.1:8000` で起動する
-2. そのポートを Tailscale HTTPS で tailnet 内公開する
+Tailscale Serve で `127.0.0.1:8000` を HTTPS 公開します。
 
 ```bash
 tailscale serve --bg --https=443 127.0.0.1:8000
 tailscale serve status
 ```
 
-補足:
+現在のアクセス URL:
 
-- Android からカメラを使う前提では、raw IP ではなく `https://<node>.<tailnet>.ts.net/` で開く
-- 既存設定を消してやり直すときは `tailscale serve reset`
+```text
+https://mac-mini.tail46ee8b.ts.net
+```
+
+スマホ側も同じ tailnet の Tailscale に接続してから、この URL を開きます。カメラ利用があるため、スマホでは raw IP ではなく Tailscale の HTTPS URL で開きます。
+
+## 使い方
+
+### 本を探す・読む
+
+- 一覧画面でタイトル、著者、出版社、ISBN を検索する
+- `favorite のみ` で favorite 登録済みの本だけに絞る
+- 本をタップすると詳細画面に移動する
+- 詳細画面で、その本に紐づく scrap 写真を読む
+
+### 本を追加する
+
+- 一覧画面の `登録` を開く
+- ISBN を入力して `Google Books から追加`
+- スマホでは `スキャンで追加` から ISBN バーコードを読む
+- `BarcodeDetector` 非対応端末では ISBN を手入力する
+
+匿名 quota で Google Books が 429 を返す場合は、repo root の `.env.local` に次を入れてから起動します。
+
+```text
+GOOGLE_BOOKS_API_KEY=...
+```
+
+`app/server.py` は起動時に `.env.local` を読みます。
+
+### scrap 写真を撮る
+
+- 一覧から本を開く
+- 詳細画面の `撮影する` を押す
+- 必要ならページ番号を入れる
+- `撮影`、確認、`保存`
+
+保存先:
+
+- SQLite DB: `data/mybooks.db`
+- scrap 画像: `data/scraps/<isbn>/`
+- schema: `scripts/schema.sql`
+
+## 運用メモ
+
+Tailscale の公開状態を確認する:
+
+```bash
+tailscale serve status
+```
+
+既存の Tailscale Serve 設定を消してやり直す:
+
+```bash
+tailscale serve reset
+```
+
+サーバを止める:
+
+- 起動している terminal で `Ctrl-C`
+
+## legacy import
+
+過去の xlsx の `scraps` シートに入っている Google Drive 画像をローカルへ落として SQLite に登録するときだけ使います。
+
+```bash
+/Users/shirai/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 \
+  scripts/import_mybooks_scraps.py \
+  --input /Users/shirai/Downloads/MyBooks.xlsx \
+  --db data/mybooks.db
+```
+
+- 画像は `data/scraps/<isbn>/` に保存される
+- すでに入っている scrap は再実行時にスキップする
+
+## design docs
+
+- `docs/architecture.md`
+- `docs/decisions/ADR-2026-04-18-local-first-web-architecture.md`
